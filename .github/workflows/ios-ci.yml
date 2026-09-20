@@ -56,10 +56,10 @@ jobs:
 
       - name: 📦 打包 Simulator App 為 Zip
         run: |
-          mkdir -p dist
+          mkdir -p "$GITHUB_WORKSPACE/dist"
           cd build/DerivedData/Build/Products/Debug-iphonesimulator
-          zip -r ../../../../dist/TravelEase-Simulator.zip TravelEase.app
-          cd ../../../../
+          zip -r "$GITHUB_WORKSPACE/dist/TravelEase-Simulator.zip" TravelEase.app
+          cd "$GITHUB_WORKSPACE"
           echo "✅ 打包完成: dist/TravelEase-Simulator.zip"
           ls -lh dist/TravelEase-Simulator.zip
 
