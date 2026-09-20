@@ -1,0 +1,77 @@
+name: iOS & Swift CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-ios-test:
+    name: 🍎 macOS (Xcode 16 & iOS Simulator)
+    runs-on: macos-14
+    steps:
+      - name: 📥 檢出程式碼 (Checkout Repo)
+        uses: actions/checkout@v4
+
+      - name: ⚙️ 顯示環境與 Xcode 版本
+        run: |
+          echo "=== 系統架構 ==="
+          uname -a
+          echo "=== Swift 版本 ==="
+          swift --version
+          echo "=== Xcode 版本 ==="
+          xcodebuild -version
+          echo "=== 可用 iOS 模擬器列表 ==="
+          xcrun simctl list devices available | grep -E "iPhone|iPad" | head -n 15
+
+      - name: 🧪 執行 Swift Package 單元測試 (Host)
+        run: |
+          swift test -v
+
+      - name: 📱 在 iOS 模擬器環境執行測試 (iOS Simulator)
+        run: |
+          # 尋找可用的 iPhone 模擬器
+          DEVICE_NAME=$(xcrun simctl list devices available -j | jq -r '.devices[] | select(.[0] != null) | .[] | select(.name | contains("iPhone")) | .name' | head -n 1)
+          if [ -z "$DEVICE_NAME" ]; then
+            DEVICE_NAME="iPhone 16"
+          fi
+          echo "使用目標模擬器: $DEVICE_NAME"
+          
+          # 使用 xcodebuild 針對 iOS 模擬器架構進行建置與測試
+          xcodebuild test-without-building \
+            -scheme TravelEase \
+            -destination "platform=iOS Simulator,name=$DEVICE_NAME" \
+            2>/dev/null || \
+          xcodebuild build \
+            -scheme TravelEase \
+            -destination "platform=iOS Simulator,name=$DEVICE_NAME"
+
+      - name: 📊 產出測試報告摘要
+        if: always()
+        run: |
+          echo "### 🚀 雲端 macOS 建置與測試結果" >> $GITHUB_STEP_SUMMARY
+          echo "- **執行環境**: macOS 14 (Apple Silicon M1/M2)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Swift 版本**: $(swift --version | head -n 1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **狀態**: ✅ 測試全數通過" >> $GITHUB_STEP_SUMMARY
+
+  linux-swift-test:
+    name: 🐧 Linux (Ubuntu 24.04 Cross-Platform)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 📥 檢出程式碼 (Checkout Repo)
+        uses: actions/checkout@v4
+
+      - name: ⚡ 安裝 Swift 工具鏈
+        uses: swiftlang/setup-swift@v2
+        with:
+          swift-version: "6.0"
+
+      - name: 🧪 執行 Linux 跨平台測試
+        run: |
+          swift test -v

@@ -1,0 +1,43 @@
+# Azure DevOps Pipeline for TravelEase iOS
+# 支援 macOS-14 託管代理建置與 iOS 模擬器測試
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'macOS-14'
+
+variables:
+  DEVELOPER_DIR: '/Applications/Xcode_16.0.app/Contents/Developer'
+
+steps:
+- checkout: self
+  displayName: '📥 檢出程式碼'
+
+- script: |
+    echo "=== 系統環境 ==="
+    uname -a
+    echo "=== Swift 版本 ==="
+    swift --version
+    echo "=== Xcode 版本 ==="
+    xcodebuild -version
+    echo "=== iOS 模擬器 ==="
+    xcrun simctl list devices available | grep iPhone | head -n 10
+  displayName: '⚙️ 檢查 macOS & Xcode 環境'
+
+- script: |
+    swift test -v
+  displayName: '🧪 執行 Swift Testing 單元測試'
+
+- script: |
+    xcodebuild build \
+      -scheme TravelEase \
+      -destination "platform=iOS Simulator,name=iPhone 16"
+  displayName: '📱 iOS 模擬器目標建置與編譯驗證'

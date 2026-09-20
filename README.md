@@ -2,6 +2,7 @@
 
 [![Swift 6.0](https://img.shields.io/badge/Swift-6.0-F05138.svg?style=flat-square&logo=swift&logoColor=white)](https://swift.org)
 [![iOS 17+](https://img.shields.io/badge/iOS-17%2B-000000.svg?style=flat-square&logo=apple&logoColor=white)](https://developer.apple.com/ios/)
+[![iOS CI/CD](https://github.com/yaochangyu/travel-ease-ios/actions/workflows/ios-ci.yml/badge.svg)](https://github.com/yaochangyu/travel-ease-ios/actions/workflows/ios-ci.yml)
 [![Swift Testing](https://img.shields.io/badge/Tests-4%2F4%20Passing-success.svg?style=flat-square)](Tests/TravelEaseTests)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
