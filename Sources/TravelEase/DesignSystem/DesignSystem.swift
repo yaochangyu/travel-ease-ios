@@ -93,5 +93,13 @@ extension View {
     public func appCard() -> some View {
         self.modifier(AppCardModifier())
     }
+
+    public func inlineTitleDisplayMode() -> some View {
+        #if os(iOS)
+        self.navigationBarTitleDisplayMode(.inline)
+        #else
+        self
+        #endif
+    }
 }
 #endif

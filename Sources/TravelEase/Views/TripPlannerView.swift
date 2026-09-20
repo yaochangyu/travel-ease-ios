@@ -66,7 +66,7 @@ public struct TripPlannerView: View {
         }
         .background(AppColors.background)
         .navigationTitle("行程時間軸")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitleDisplayMode()
     }
 
     private var currentSchedule: TripDaySchedule? {

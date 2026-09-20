@@ -99,7 +99,7 @@ public struct TravelMapView: View {
             )
         }
         .navigationTitle("周邊地圖")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitleDisplayMode()
     }
 }
 
@@ -182,7 +182,7 @@ public struct ProfileView: View {
         }
         .background(AppColors.background)
         .navigationTitle("個人中心")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitleDisplayMode()
     }
 }
 

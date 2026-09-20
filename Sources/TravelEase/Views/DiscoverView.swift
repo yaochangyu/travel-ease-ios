@@ -27,7 +27,7 @@ public struct DiscoverView: View {
         }
         .background(AppColors.background)
         .navigationTitle("探索台灣美景")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitleDisplayMode()
     }
 
     // MARK: - Subviews
