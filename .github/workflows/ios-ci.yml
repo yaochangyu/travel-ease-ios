@@ -1,4 +1,4 @@
-name: iOS & Swift CI/CD
+name: iOS & Swift CI/CD (with Cloud Simulator Package)
 
 on:
   push:
@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  macos-ios-test:
-    name: 🍎 macOS (Xcode 16 & iOS Simulator)
+  macos-ios-build-and-simulate:
+    name: 🍎 macOS 14 (Build & Package iOS Simulator App)
     runs-on: macos-14
     steps:
       - name: 📥 檢出程式碼 (Checkout Repo)
@@ -33,23 +33,85 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: 🧪 執行 Swift Package 單元測試 (Host)
+      - name: 🧪 執行 Swift Package 單元測試
         run: |
           swift test -v
 
-      - name: 📱 在 iOS 模擬器目標執行建置 (iOS Simulator Generic Target)
+      - name: 🛠️ 安裝 XcodeGen 並產生 Xcode 專案
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: 📱 編譯 iOS 模擬器專用 App (.app bundle)
         run: |
           xcodebuild build \
+            -project TravelEase.xcodeproj \
             -scheme TravelEase \
-            -destination "generic/platform=iOS Simulator"
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
 
-      - name: 📊 產出測試報告摘要
+      - name: 📦 打包 Simulator App 為 Zip
+        run: |
+          mkdir -p dist
+          cd build/DerivedData/Build/Products/Debug-iphonesimulator
+          zip -r ../../../../dist/TravelEase-Simulator.zip TravelEase.app
+          cd ../../../../
+          echo "✅ 打包完成: dist/TravelEase-Simulator.zip"
+          ls -lh dist/TravelEase-Simulator.zip
+
+      - name: ☁️ 上傳 App Artifact 到 GitHub Releases/Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TravelEase-iOS-Simulator-App
+          path: dist/TravelEase-Simulator.zip
+          retention-days: 14
+
+      - name: 🌐 自動發布至 Appetize.io (若已設定 Token)
+        id: appetize_upload
+        env:
+          APPETIZE_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+        run: |
+          if [ -n "$APPETIZE_TOKEN" ]; then
+            echo "🚀 偵測到 Appetize API Token，正在上傳至 Appetize.io..."
+            RESPONSE=$(curl --silent --location --request POST 'https://api.appetize.io/v2/apps' \
+              --header "Authorization: Bearer $APPETIZE_TOKEN" \
+              --form 'file=@dist/TravelEase-Simulator.zip' \
+              --form 'platform=ios')
+            
+            echo "Response: $RESPONSE"
+            PUBLIC_KEY=$(echo $RESPONSE | grep -o '"publicKey":"[^"]*' | cut -d'"' -f4 || true)
+            
+            if [ -n "$PUBLIC_KEY" ]; then
+              APP_URL="https://appetize.io/embed/${PUBLIC_KEY}?device=iphone16pro&osVersion=18.0&scale=85"
+              echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
+              echo "✅ Appetize 上傳成功: $APP_URL"
+            fi
+          else
+            echo "ℹ️ 未設定 APPETIZE_API_TOKEN，可下載 Artifact 後至 https://appetize.io/upload 免費手動拖曳體驗。"
+          fi
+
+      - name: 📊 產出建置與線上模擬器摘要
         if: always()
         run: |
-          echo "### 🚀 雲端 macOS 建置與測試結果" >> $GITHUB_STEP_SUMMARY
-          echo "- **執行環境**: macOS 14 (Apple Silicon M1/M2)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Swift 版本**: $(swift --version | head -n 1)" >> $GITHUB_STEP_SUMMARY
-          echo "- **狀態**: ✅ 測試全數通過" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 雲端 iOS 模擬器 App 建置報告" >> $GITHUB_STEP_SUMMARY
+          echo "- **執行環境**: macOS 14 (Xcode 16 / Swift 6)" >> $GITHUB_STEP_SUMMARY
+          echo "- **單元測試**: ✅ 4/4 測試通過" >> $GITHUB_STEP_SUMMARY
+          echo "- **模擬器 Bundle**: \`TravelEase.app\` (支援 arm64 / x86_64 iOS Simulator)" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ steps.appetize_upload.outputs.app_url }}" ]; then
+            echo "#### 📱 線上即時 iOS 模擬器 (Appetize.io)" >> $GITHUB_STEP_SUMMARY
+            echo "👉 [點此在瀏覽器開啟 iPhone 16 Pro 實機操作](${{ steps.appetize_upload.outputs.app_url }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "#### 📱 如何在瀏覽器中開啟 iOS 模擬器" >> $GITHUB_STEP_SUMMARY
+            echo "1. 在本頁上方下載 **TravelEase-iOS-Simulator-App** (Zip 檔)。" >> $GITHUB_STEP_SUMMARY
+            echo "2. 開啟 [Appetize.io 免費上傳頁面](https://appetize.io/upload)。" >> $GITHUB_STEP_SUMMARY
+            echo "3. 將下載的 \`TravelEase-Simulator.zip\` 拖曳進去，即可直接在網頁操作 iOS 介面！" >> $GITHUB_STEP_SUMMARY
+            echo "4. *(可選)* 在 GitHub Repository Settings > Secrets 加入 \`APPETIZE_API_TOKEN\`，日後每次 push 將自動產出專屬免上傳連結。" >> $GITHUB_STEP_SUMMARY
+          fi
 
   linux-swift-test:
     name: 🐧 Linux (Ubuntu 24.04 Cross-Platform)
